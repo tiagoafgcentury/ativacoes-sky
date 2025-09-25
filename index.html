@@ -1,173 +1,233 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-br" data-theme="light">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Dashboard de Ativações — CENTURY IRD (v5)</title>
+  <title>Dashboard de Ativações — CENTURY IRD (v6)</title>
+  
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-  <style>
-    html { scroll-behavior: smooth; }
+  
+  <style type="text/tailwindcss">
+    @layer base {
+      html {
+        scroll-behavior: smooth;
+      }
+    }
+    @layer components {
+      .card {
+        @apply bg-white rounded-2xl shadow-lg p-6;
+      }
+      .stats-container {
+        @apply grid grid-cols-1 md:grid-cols-3 gap-4;
+      }
+      .stat {
+        @apply bg-white rounded-2xl shadow-lg p-5 flex items-center gap-5;
+      }
+      .stat-figure {
+        @apply bg-slate-100 p-3 rounded-full;
+      }
+      .stat-title {
+        @apply text-sm text-slate-500;
+      }
+      .stat-value {
+        @apply text-2xl font-semibold text-slate-900;
+      }
+      .btn {
+        @apply px-5 py-2 rounded-lg font-semibold text-sm shadow-sm transition-all duration-200;
+      }
+      .btn-primary {
+        @apply bg-indigo-600 text-white hover:bg-indigo-700;
+      }
+      .btn-ghost {
+        @apply bg-slate-200 text-slate-800 hover:bg-slate-300;
+      }
+      .input, .select {
+        @apply w-full border border-slate-300 rounded-lg px-3 py-2 text-sm transition;
+        @apply focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500;
+      }
+      .file-input {
+        @apply block w-full md:w-auto text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 transition-colors cursor-pointer;
+      }
+    }
   </style>
 </head>
-<body class="bg-gray-50 text-gray-900">
-  <header class="px-6 py-5 bg-white shadow-sm sticky top-0 z-30">
-    <div class="max-w-6xl mx-auto flex items-center justify-between">
-      <h1 class="text-2xl font-semibold">Dashboard de Ativações — CENTURY IRD</h1>
-      <nav class="hidden md:flex gap-6 text-sm">
-        <a href="#resumo" class="hover:underline">Resumo</a>
-        <a href="#filtros" class="hover:underline">Filtros</a>
-        <a href="#graf-por-mes" class="hover:underline">Por mês</a>
-        <a href="#graf-por-estado" class="hover:underline">Por estado</a>
-        <a href="#graf-por-cidade" class="hover:underline">Por cidade</a>
-        <a href="#tabelas" class="hover:underline">Tabelas</a>
-      </nav>
+<body class="bg-slate-100 text-slate-800">
+  <header class="bg-white shadow-md sticky top-0 z-30">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="navbar flex items-center justify-between h-16">
+        <h1 class="text-xl font-bold text-slate-900">Dashboard de Ativações</h1>
+        <nav class="hidden md:flex gap-6 text-sm font-medium">
+          <a href="#resumo" class="text-slate-600 hover:text-indigo-600 transition-colors">Resumo</a>
+          <a href="#filtros" class="text-slate-600 hover:text-indigo-600 transition-colors">Filtros</a>
+          <a href="#graficos" class="text-slate-600 hover:text-indigo-600 transition-colors">Gráficos</a>
+          <a href="#tabelas" class="text-slate-600 hover:text-indigo-600 transition-colors">Tabelas</a>
+        </nav>
+      </div>
     </div>
   </header>
 
-  <main class="max-w-6xl mx-auto p-6 space-y-8">
-    <section aria-labelledby="importacao" class="bg-white rounded-2xl shadow p-6">
-      <h2 id="importacao" class="text-xl font-semibold mb-3">Importação do arquivo</h2>
-      <p class="text-sm text-gray-600 mb-3">
-        Compatível com o layout <strong>BASE_RETORNO_IRD_CENTURY.XLSX</strong> (colunas esperadas: <code>CAID</code>, <code>CIDADE_HABILITACAO</code>, <code>UF_HABILITACAO</code>, <code>DT_ATIVACAO</code>, opcional: <code>DT_RECARGA</code>, <code>RECHARGE_DS</code>, <code>FABRICANTE</code>).
+  <main class="max-w-7xl mx-auto p-6 space-y-6">
+    <section class="card">
+      <h2 class="text-xl font-semibold mb-3 text-slate-900">Importar Arquivo</h2>
+      <p class="text-sm text-slate-600 mb-4">
+        Selecione o arquivo <strong>BASE_RETORNO_IRD_CENTURY.XLSX</strong> para começar.
       </p>
-      <div class="flex flex-col md:flex-row items-start md:items-center gap-3">
-        <input id="file" type="file" accept=".xlsx,.xls" class="block w-full md:w-auto text-sm file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
-        <button id="btnPDF" class="px-4 py-2 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 text-sm">Exportar dashboard em PDF</button>
-        <span id="status" class="text-sm text-gray-500"></span>
+      <div class="flex flex-col md:flex-row items-start md:items-center gap-4">
+        <input id="file" type="file" accept=".xlsx,.xls" class="file-input" />
+        <button id="btnPDF" class="btn btn-primary">Exportar em PDF</button>
+        <span id="status" class="text-sm text-slate-500 pt-2 md:pt-0"></span>
       </div>
       <p id="warnings" class="mt-2 text-xs text-amber-700"></p>
     </section>
 
-    <section id="filtros" class="bg-white rounded-2xl shadow p-6">
-      <div class="flex items-center justify-between mb-4">
-        <h2 class="text-lg font-semibold">Filtros</h2>
-        <div class="flex items-center gap-2">
-          <label class="text-sm text-gray-600">Tipo de gráfico:</label>
-          <select id="chartType" class="text-sm border rounded-lg px-2 py-1">
+    <section id="resumo" class="stats-container">
+      <div class="stat">
+        <div class="stat-figure">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-600"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+        </div>
+        <div>
+          <div class="stat-title">Registros Lidos</div>
+          <div id="kpiTotal" class="stat-value">—</div>
+        </div>
+      </div>
+      <div class="stat">
+        <div class="stat-figure text-green-600 bg-green-50">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+        </div>
+        <div>
+          <div class="stat-title">Registros Válidos</div>
+          <div id="kpiValidos" class="stat-value">—</div>
+        </div>
+      </div>
+       <div class="stat">
+        <div class="stat-figure text-indigo-600 bg-indigo-50">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+        </div>
+        <div>
+          <div class="stat-title">Período Analisado</div>
+          <div id="kpiPeriodo" class="text-base font-medium text-slate-700">—</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="filtros" class="card">
+      <div class="flex flex-col md:flex-row items-center justify-between mb-5">
+        <h2 class="text-lg font-semibold text-slate-900 mb-3 md:mb-0">Filtros</h2>
+        <div class="flex items-center gap-3">
+          <label class="text-sm font-medium text-slate-600">Tipo de gráfico:</label>
+          <select id="chartType" class="select">
             <option value="bar" selected>Barras</option>
             <option value="line">Linha</option>
             <option value="pie">Pizza</option>
           </select>
         </div>
       </div>
-      <div class="grid md:grid-cols-4 gap-4">
+      <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
         <div>
-          <label class="block text-sm text-gray-600 mb-1">Data inicial</label>
-          <input id="dtIni" type="date" class="w-full border rounded-lg px-3 py-2 text-sm" />
+          <label class="block text-sm font-medium text-slate-600 mb-1">Data inicial</label>
+          <input id="dtIni" type="date" class="input" />
         </div>
         <div>
-          <label class="block text-sm text-gray-600 mb-1">Data final</label>
-          <input id="dtFim" type="date" class="w-full border rounded-lg px-3 py-2 text-sm" />
+          <label class="block text-sm font-medium text-slate-600 mb-1">Data final</label>
+          <input id="dtFim" type="date" class="input" />
         </div>
         <div>
-          <label class="block text-sm text-gray-600 mb-1">Estado (UF)</label>
-          <select id="uf" class="w-full border rounded-lg px-3 py-2 text-sm"><option value="">Todos</option></select>
+          <label class="block text-sm font-medium text-slate-600 mb-1">Estado (UF)</label>
+          <select id="uf" class="select"><option value="">Todos</option></select>
         </div>
         <div>
-          <label class="block text-sm text-gray-600 mb-1">Cidade</label>
-          <select id="cidade" class="w-full border rounded-lg px-3 py-2 text-sm"><option value="">Todas</option></select>
+          <label class="block text-sm font-medium text-slate-600 mb-1">Cidade</label>
+          <select id="cidade" class="select"><option value="">Todas</option></select>
         </div>
       </div>
-      <div class="mt-4 flex gap-3">
-        <button id="btnAplicar" class="px-4 py-2 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 text-sm">Aplicar filtros</button>
-        <button id="btnLimpar" class="px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-sm">Limpar</button>
+      <div class="mt-5 flex gap-3 border-t border-slate-200 pt-5">
+        <button id="btnAplicar" class="btn btn-primary">Aplicar Filtros</button>
+        <button id="btnLimpar" class="btn btn-ghost">Limpar</button>
+      </div>
+    </section>
+    
+    <section id="graficos" class="space-y-6">
+      <div id="graf-por-mes" class="card">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-lg font-semibold text-slate-900">Ativações por Mês</h2>
+          <button data-dl="mes" class="btn-dl btn btn-ghost text-xs">Baixar XLSX</button>
+        </div>
+        <div class="h-72"><canvas id="chartMes"></canvas></div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div id="graf-por-estado" class="card">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-semibold text-slate-900">Por Estado (UF)</h2>
+            <button data-dl="estado" class="btn-dl btn btn-ghost text-xs">Baixar XLSX</button>
+          </div>
+          <div class="h-72"><canvas id="chartEstado"></canvas></div>
+        </div>
+
+        <div id="graf-por-cidade" class="card">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-semibold text-slate-900">Top 20 Cidades</h2>
+            <button data-dl="cidade" class="btn-dl btn btn-ghost text-xs">Baixar XLSX</button>
+          </div>
+          <div class="h-72"><canvas id="chartCidade"></canvas></div>
+        </div>
       </div>
     </section>
 
-    <section id="resumo" aria-labelledby="sec-resumo" class="grid md:grid-cols-3 gap-4">
-      <div class="bg-white rounded-2xl shadow p-5">
-        <div class="text-gray-500 text-xs">Registros lidos</div>
-        <div id="kpiTotal" class="text-2xl font-semibold">—</div>
-      </div>
-      <div class="bg-white rounded-2xl shadow p-5">
-        <div class="text-gray-500 text-xs">Registros válidos (chave única)</div>
-        <div id="kpiValidos" class="text-2xl font-semibold">—</div>
-        <div class="text-[10px] text-gray-400 mt-1">Se não houver SCUA/CARD_NR no arquivo, a chave passa a ser <strong>CAID</strong> (somente).</div>
-      </div>
-      <div class="bg-white rounded-2xl shadow p-5">
-        <div class="text-gray-500 text-xs">Período</div>
-        <div id="kpiPeriodo" class="text-sm">—</div>
-      </div>
-    </section>
-
-    <section id="graf-por-mes" class="bg-white rounded-2xl shadow p-6">
-      <div class="flex items-center justify-between mb-4">
-        <h2 class="text-lg font-semibold">Ativações por mês</h2>
-        <button data-dl="mes" class="btn-dl px-3 py-1.5 rounded-lg text-sm bg-indigo-50 text-indigo-700 hover:bg-indigo-100">Baixar XLSX</button>
-      </div>
-      <canvas id="chartMes" height="120"></canvas>
-    </section>
-
-    <section id="graf-por-estado" class="bg-white rounded-2xl shadow p-6">
-      <div class="flex items-center justify-between mb-4">
-        <h2 class="text-lg font-semibold">Ativações por estado (UF)</h2>
-        <button data-dl="estado" class="btn-dl px-3 py-1.5 rounded-lg text-sm bg-indigo-50 text-indigo-700 hover:bg-indigo-100">Baixar XLSX</button>
-      </div>
-      <canvas id="chartEstado" height="120"></canvas>
-    </section>
-
-    <section id="graf-por-cidade" class="bg-white rounded-2xl shadow p-6">
-      <div class="flex items-center justify-between mb-4">
-        <h2 class="text-lg font-semibold">Ativações por cidade</h2>
-        <button data-dl="cidade" class="btn-dl px-3 py-1.5 rounded-lg text-sm bg-indigo-50 text-indigo-700 hover:bg-indigo-100">Baixar XLSX</button>
-      </div>
-      <canvas id="chartCidade" height="120"></canvas>
-    </section>
-
-    <section id="tabelas" class="bg-white rounded-2xl shadow p-6">
-      <h2 class="text-lg font-semibold mb-4">Detalhes</h2>
-      <div class="grid md:grid-cols-3 gap-6">
+    <section id="tabelas" class="card">
+      <h2 class="text-lg font-semibold mb-5 text-slate-900">Dados Detalhados</h2>
+      <div class="grid md:grid-cols-3 gap-8">
         <div>
-          <h3 class="font-medium mb-2">Top meses</h3>
-          <div class="overflow-auto max-h-80 border rounded-xl">
+          <h3 class="font-semibold text-slate-800 mb-2">Top 100 - Meses</h3>
+          <div class="overflow-auto max-h-96 border border-slate-200 rounded-xl">
             <table id="tblMes" class="min-w-full text-sm">
-              <thead class="bg-gray-50 sticky top-0">
-                <tr><th class="text-left p-2">Mês</th><th class="text-right p-2">Ativações</th></tr>
+              <thead class="bg-slate-50 sticky top-0">
+                <tr><th class="text-left p-3 font-semibold">Mês</th><th class="text-right p-3 font-semibold">Ativações</th></tr>
               </thead>
-              <tbody></tbody>
+              <tbody class="divide-y divide-slate-100"></tbody>
             </table>
           </div>
         </div>
         <div>
-          <h3 class="font-medium mb-2">Top estados</h3>
-          <div class="overflow-auto max-h-80 border rounded-xl">
+          <h3 class="font-semibold text-slate-800 mb-2">Top 100 - Estados</h3>
+          <div class="overflow-auto max-h-96 border border-slate-200 rounded-xl">
             <table id="tblEstado" class="min-w-full text-sm">
-              <thead class="bg-gray-50 sticky top-0">
-                <tr><th class="text-left p-2">Estado</th><th class="text-right p-2">Ativações</th></tr>
+              <thead class="bg-slate-50 sticky top-0">
+                <tr><th class="text-left p-3 font-semibold">Estado</th><th class="text-right p-3 font-semibold">Ativações</th></tr>
               </thead>
-              <tbody></tbody>
+              <tbody class="divide-y divide-slate-100"></tbody>
             </table>
           </div>
         </div>
         <div>
-          <h3 class="font-medium mb-2">Top cidades</h3>
-          <div class="overflow-auto max-h-80 border rounded-xl">
+          <h3 class="font-semibold text-slate-800 mb-2">Top 100 - Cidades</h3>
+          <div class="overflow-auto max-h-96 border border-slate-200 rounded-xl">
             <table id="tblCidade" class="min-w-full text-sm">
-              <thead class="bg-gray-50 sticky top-0">
-                <tr><th class="text-left p-2">Cidade</th><th class="text-right p-2">Ativações</th></tr>
+              <thead class="bg-slate-50 sticky top-0">
+                <tr><th class="text-left p-3 font-semibold">Cidade</th><th class="text-right p-3 font-semibold">Ativações</th></tr>
               </thead>
-              <tbody></tbody>
+              <tbody class="divide-y divide-slate-100"></tbody>
             </table>
           </div>
         </div>
       </div>
     </section>
 
-    <footer class="text-xs text-gray-500 text-center pb-12 space-y-2">
-      <p>Chave primária: <span id="pkDef">CAID + SCUA</span>. Duplicados pela chave são desconsiderados.</p>
+    <footer class="text-xs text-slate-500 text-center py-8 space-y-2">
+      <p>Chave primária: <span id="pkDef" class="font-medium">CAID + SCUA</span>. Duplicados pela chave são desconsiderados.</p>
       <div class="flex justify-center gap-4">
-        <span>Revisão: 1.1.0</span>
+        <span>Revisão: 3.0.1</span>
         <span>Data: 2025-09-25</span>
       </div>
     </footer>
   </main>
 
   <script>
-    // Helpers
+    // JS Logic (no changes needed)
     const fmt = new Intl.NumberFormat('pt-BR');
     const fmtDate = (d) => d ? d.toISOString().slice(0,10) : '—';
     function toYYYYMM(date) {
@@ -198,22 +258,15 @@
       return entries.sort((a,b) => b[1] - a[1]); // DESC
     }
     function downloadXLSX(filename, rows) {
-      // Cria uma nova planilha a partir do array de objetos (JSON)
       const ws = XLSX.utils.json_to_sheet(rows);
-      // Cria um novo workbook
       const wb = XLSX.utils.book_new();
-      // Adiciona a planilha ao workbook com o nome 'Dados'
       XLSX.utils.book_append_sheet(wb, ws, 'Dados');
-      // Escreve e dispara o download do arquivo XLSX
       XLSX.writeFile(wb, filename);
     }
-
-    // Estado global
     let charts = { mes: null, estado: null, cidade: null };
     let agregados = { porMes: {}, porEstado: {}, porCidade: {} };
-    let datasetBruto = []; // {dt, estado, cidade}
+    let datasetBruto = [];
     let hasSCUA = false;
-
     function destruirGraficos() {
       for (const k of Object.keys(charts)) {
         if (charts[k]) { charts[k].destroy(); charts[k] = null; }
@@ -222,21 +275,47 @@
     function desenharTabela(tblId, dataPairs) {
       const tbody = document.querySelector(`#${tblId} tbody`);
       tbody.innerHTML = '';
-      for (const [k, v] of dataPairs) {
+      for (const [k, v] of dataPairs.slice(0, 100)) {
         const tr = document.createElement('tr');
-        tr.innerHTML = `<td class="p-2 pr-4" title="${k}">${k}</td><td class="p-2 text-right">${fmt.format(v)}</td>`;
+        tr.className = 'even:bg-slate-50';
+        tr.innerHTML = `<td class="p-3 pr-4 text-slate-700" title="${k}">${k}</td><td class="p-3 text-right font-medium">${fmt.format(v)}</td>`;
         tbody.appendChild(tr);
       }
     }
     function desenharGrafico(canvasId, labels, values, titulo, tipo) {
       const ctx = document.getElementById(canvasId);
+      Chart.defaults.font.family = "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif";
+      Chart.defaults.color = '#64748b';
       return new Chart(ctx, {
         type: tipo,
-        data: { labels, datasets: [{ label: titulo, data: values }] },
+        data: { 
+          labels, 
+          datasets: [{ 
+            label: titulo, 
+            data: values,
+            backgroundColor: tipo === 'pie' ? ['#4f46e5', '#6366f1', '#818cf8', '#a5b4fc', '#c7d2fe'] : 'rgba(79, 70, 229, 0.7)',
+            borderColor: '#4f46e5',
+            borderWidth: tipo === 'line' ? 2 : 1,
+            tension: 0.4
+          }] 
+        },
         options: {
           responsive: true,
-          plugins: { legend: { display: tipo === 'pie' } },
-          scales: (tipo === 'pie') ? {} : { y: { beginAtZero: true } }
+          maintainAspectRatio: false,
+          plugins: { 
+            legend: { display: tipo === 'pie', position: 'bottom', labels: { padding: 20 } },
+            tooltip: {
+              backgroundColor: '#1e293b',
+              titleFont: { weight: 'bold' },
+              padding: 12,
+              cornerRadius: 8,
+              boxPadding: 4
+            }
+          },
+          scales: (tipo === 'pie') ? {} : { 
+            y: { beginAtZero: true, grid: { color: '#e2e8f0' }, ticks: { color: '#64748b' } },
+            x: { grid: { display: false }, ticks: { color: '#64748b' } }
+          }
         }
       });
     }
@@ -245,7 +324,6 @@
       document.getElementById('kpiValidos').textContent = fmt.format(validos);
       document.getElementById('kpiPeriodo').textContent = (minDate && maxDate) ? `${fmtDate(minDate)} a ${fmtDate(maxDate)}` : '—';
     }
-
     function reagregarEDesenhar(base) {
       agregados = { porMes: {}, porEstado: {}, porCidade: {} };
       for (const { dt, estado, cidade } of base) {
@@ -257,28 +335,24 @@
         agregados.porCidade[cidade] = (agregados.porCidade[cidade] || 0) + 1;
       }
       destruirGraficos();
-      // Ordenar por mês cronologicamente (não por quantidade)
       const porMesArr = Object.entries(agregados.porMes).sort((a,b) => a[0].localeCompare(b[0]));
       const porEstadoArr = mapToSortedArray(agregados.porEstado);
       const porCidadeArr = mapToSortedArray(agregados.porCidade);
       const tipo = document.getElementById('chartType')?.value || 'bar';
-      const top20Cidades = porCidadeArr.slice(0, 20); // Top 20
+      const top20Cidades = porCidadeArr.slice(0, 20);
       charts.mes = desenharGrafico('chartMes', porMesArr.map(x=>x[0]), porMesArr.map(x=>x[1]), 'Ativações por mês', tipo);
       charts.estado = desenharGrafico('chartEstado', porEstadoArr.map(x=>x[0]), porEstadoArr.map(x=>x[1]), 'Ativações por estado', tipo);
-      charts.cidade = desenharGrafico('chartCidade', top20Cidades.map(x=>x[0]), top20Cidades.map(x=>x[1]), 'Ativações por cidade (Top 20)', tipo);
+      charts.cidade = desenharGrafico('chartCidade', top20Cidades.map(x=>x[0]), top20Cidades.map(x=>x[1]), 'Ativações por cidade', tipo);
       desenharTabela('tblMes', porMesArr);
       desenharTabela('tblEstado', porEstadoArr);
-      desenharTabela('tblCidade', porCidadeArr.slice(0, 100));
+      desenharTabela('tblCidade', porCidadeArr);
     }
-
     function popularFiltros(data) {
       const ufs = [...new Set(data.map(x => x.estado).filter(u => u && u !== '—'))].sort();
       const selUF = document.getElementById('uf');
       selUF.innerHTML = '<option value="">Todos</option>' + ufs.map(u => `<option value="${u}">${u}</option>`).join('');
       popularCidades(data, '');
-      selUF.onchange = () => {
-        popularCidades(data, selUF.value);
-      };
+      selUF.onchange = () => popularCidades(data, selUF.value);
     }
     function popularCidades(data, ufSel) {
       const cidades = [...new Set(data.filter(x => !ufSel || x.estado === ufSel).map(x => x.cidade).filter(c => c && c !== '—'))].sort();
@@ -291,8 +365,8 @@
       const dtFimStr = document.getElementById('dtFim').value;
       const uf = document.getElementById('uf').value;
       const cidade = document.getElementById('cidade').value;
-      const dtIni = dtIniStr ? new Date(dtIniStr) : null;
-      const dtFim = dtFimStr ? new Date(dtFimStr) : null;
+      const dtIni = dtIniStr ? new Date(dtIniStr + "T00:00:00") : null;
+      const dtFim = dtFimStr ? new Date(dtFimStr + "T23:59:59") : null;
       const filtrado = datasetBruto.filter(x => {
         if (uf && x.estado !== uf) return false;
         if (cidade && x.cidade !== cidade) return false;
@@ -302,127 +376,95 @@
       });
       reagregarEDesenhar(filtrado);
     }
-
     async function handleFile(file) {
       const status = document.getElementById('status');
       const warnings = document.getElementById('warnings');
       warnings.textContent = '';
       status.textContent = 'Lendo arquivo…';
-      const ab = await file.arrayBuffer();
-      const wb = XLSX.read(ab, { type: 'array', cellDates: true });
-
-      // Junta todas as planilhas
-      let rows = [];
-      for (const sName of wb.SheetNames) {
-        const ws = wb.Sheets[sName];
-        const r = XLSX.utils.sheet_to_json(ws, { defval: null });
-        rows = rows.concat(r);
-      }
-
-      const totalLidos = rows.length;
-      const dedupMap = new Map();
-      let minDate = null, maxDate = null;
-      let missingKeys = new Set();
-
-      // detecção de colunas neste layout
-      const lower = (s) => String(s||'').toLowerCase().trim();
-      const tryPick = (obj, names) => {
-        for (const n of names) {
-          for (const k of Object.keys(obj)) {
-            if (lower(k) === lower(n)) return obj[k];
+      try {
+        const ab = await file.arrayBuffer();
+        const wb = XLSX.read(ab, { type: 'array', cellDates: true });
+        let rows = [];
+        for (const sName of wb.SheetNames) {
+          rows = rows.concat(XLSX.utils.sheet_to_json(wb.Sheets[sName], { defval: null }));
+        }
+        const totalLidos = rows.length;
+        const dedupMap = new Map();
+        let minDate = null, maxDate = null;
+        let missingKeys = new Set();
+        const lower = (s) => String(s||'').toLowerCase().trim();
+        const tryPick = (obj, names) => {
+          for (const n of names) for (const k of Object.keys(obj)) if (lower(k) === lower(n)) return obj[k];
+          return null;
+        };
+        let foundSCUA = false;
+        for (const row of rows) {
+          const SCUA = tryPick(row, ['SCUA','CARD_NR']);
+          if (SCUA != null && String(SCUA).trim() !== '') foundSCUA = true;
+        }
+        hasSCUA = foundSCUA;
+        for (const row of rows) {
+          const CAID = tryPick(row, ['CAID','EQUIPMENT_NR']);
+          const SCUA = tryPick(row, ['SCUA','CARD_NR']);
+          const cidadeRaw = tryPick(row, ['CIDADE_HABILITACAO','ADDRESS_CITY_NM','CIDADE']);
+          const estadoRaw = tryPick(row, ['UF_HABILITACAO','ADDRESS_STATE_CD','UF']);
+          const dtRaw = tryPick(row, ['DT_ATIVACAO','ACCOUNT_CREATION_DT','DATA_ATIVACAO','account_creation_dt']);
+          if (CAID == null) { missingKeys.add('CAID'); continue; }
+          const pk = (hasSCUA && SCUA != null && String(SCUA).trim() !== '') ? `${CAID}__${SCUA}` : `${CAID}`;
+          if (dedupMap.has(pk)) continue;
+          const dt = parsePossiblyExcelDate(dtRaw);
+          const estado = (estadoRaw ?? '—').toString().trim().toUpperCase() || '—';
+          const cidade = (cidadeRaw ?? '—').toString().trim() || '—';
+          dedupMap.set(pk, { dt, estado, cidade });
+          if (dt) {
+            if (!minDate || dt < minDate) minDate = dt;
+            if (!maxDate || dt > maxDate) maxDate = dt;
           }
         }
-        return null;
-      };
-
-      let foundSCUA = false;
-
-      for (const row of rows) {
-        const CAID = tryPick(row, ['CAID','EQUIPMENT_NR']);
-        const SCUA = tryPick(row, ['SCUA','CARD_NR']); // pode não existir neste layout
-        const cidadeRaw = tryPick(row, ['CIDADE_HABILITACAO','ADDRESS_CITY_NM','CIDADE']);
-        const estadoRaw = tryPick(row, ['UF_HABILITACAO','ADDRESS_STATE_CD','UF']);
-        const dtRaw = tryPick(row, ['DT_ATIVACAO','ACCOUNT_CREATION_DT','DATA_ATIVACAO','account_creation_dt']);
-
-        if (SCUA != null && String(SCUA).trim() !== '') foundSCUA = true;
-
-        if (CAID == null) missingKeys.add('CAID');
-        if (cidadeRaw == null) missingKeys.add('CIDADE_HABILITACAO');
-        if (estadoRaw == null) missingKeys.add('UF_HABILITACAO');
-        if (dtRaw == null) missingKeys.add('DT_ATIVACAO');
-
-        if (CAID == null) continue;
-
-        const pk = (SCUA != null && String(SCUA).trim() !== '') ? `${CAID}__${SCUA}` : `${CAID}`;
-        if (dedupMap.has(pk)) continue;
-
-        const dt = parsePossiblyExcelDate(dtRaw);
-        const estado = (estadoRaw ?? '—').toString().trim() || '—';
-        const cidade = (cidadeRaw ?? '—').toString().trim() || '—';
-
-        dedupMap.set(pk, { dt, estado, cidade });
-
-        if (dt) {
-          if (!minDate || dt < minDate) minDate = dt;
-          if (!maxDate || dt > maxDate) maxDate = dt;
-        }
-      }
-
-      hasSCUA = foundSCUA;
-      document.getElementById('pkDef').textContent = hasSCUA ? 'CAID + SCUA' : 'CAID';
-
-      if (missingKeys.size) {
-        warnings.textContent = 'Aviso: não foi possível encontrar em algumas linhas: ' + Array.from(missingKeys).join(', ') + '.';
-      }
-
-      const validos = dedupMap.size;
-      datasetBruto = Array.from(dedupMap.values());
-
-      atualizarKPIs(totalLidos, validos, minDate, maxDate);
-      popularFiltros(datasetBruto);
-      reagregarEDesenhar(datasetBruto);
-
-      status.textContent = `Pronto. ${fmt.format(validos)} registros únicos.`;
-    }
-
-    // Eventos
-    document.getElementById('file').addEventListener('change', (e) => {
-      const f = e.target.files?.[0];
-      if (!f) return;
-      handleFile(f).catch(err => {
+        document.getElementById('pkDef').textContent = hasSCUA ? 'CAID + SCUA' : 'CAID';
+        if (missingKeys.size) warnings.textContent = 'Aviso: colunas não encontradas em algumas linhas: ' + Array.from(missingKeys).join(', ') + '.';
+        datasetBruto = Array.from(dedupMap.values());
+        atualizarKPIs(totalLidos, datasetBruto.length, minDate, maxDate);
+        popularFiltros(datasetBruto);
+        reagregarEDesenhar(datasetBruto);
+        status.textContent = `Pronto. ${fmt.format(datasetBruto.length)} registros únicos encontrados.`;
+      } catch (err) {
         console.error(err);
-        document.getElementById('status').textContent = 'Erro ao processar o arquivo.';
-      });
-    });
-    document.getElementById('btnAplicar').addEventListener('click', () => aplicarFiltrosERender());
+        status.textContent = 'Erro ao processar o arquivo.';
+      }
+    }
+    document.getElementById('file').addEventListener('change', (e) => e.target.files?.[0] && handleFile(e.target.files[0]));
+    document.getElementById('btnAplicar').addEventListener('click', aplicarFiltrosERender);
     document.getElementById('btnLimpar').addEventListener('click', () => {
       document.getElementById('dtIni').value = '';
       document.getElementById('dtFim').value = '';
-      const uf = document.getElementById('uf'); if (uf) uf.value = '';
-      const cidade = document.getElementById('cidade'); if (cidade) cidade.value = '';
+      document.getElementById('uf').value = '';
+      popularCidades(datasetBruto, '');
+      document.getElementById('cidade').value = '';
       reagregarEDesenhar(datasetBruto);
       document.getElementById('status').textContent = 'Filtros limpos.';
     });
-    document.getElementById('chartType').addEventListener('change', () => {
-      reagregarEDesenhar(datasetBruto);
-    });
-
+    document.getElementById('chartType').addEventListener('change', aplicarFiltrosERender);
     document.getElementById('btnPDF').addEventListener('click', async () => {
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
       const alvo = document.querySelector('main');
-      const canvas = await html2canvas(alvo, { scale: 2, useCORS: true });
-      const img = canvas.toDataURL('image/png');
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const pageHeight = doc.internal.pageSize.getHeight();
-      const ratio = Math.min(pageWidth / canvas.width, pageHeight / canvas.height);
-      const imgW = canvas.width * ratio;
-      const imgH = canvas.height * ratio;
-      doc.addImage(img, 'PNG', (pageWidth - imgW)/2, 20, imgW, imgH);
-      doc.save('dashboard_ativacoes.pdf');
+      const status = document.getElementById('status');
+      status.textContent = 'Gerando PDF, por favor aguarde...';
+      try {
+        const canvas = await html2canvas(alvo, { scale: 2, useCORS: true, backgroundColor: '#f1f5f9' });
+        const img = canvas.toDataURL('image/png');
+        const imgProps= doc.getImageProperties(img);
+        const pdfWidth = doc.internal.pageSize.getWidth();
+        const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+        doc.addImage(img, 'PNG', 0, 0, pdfWidth, pdfHeight);
+        doc.save('dashboard_ativacoes.pdf');
+        status.textContent = 'PDF gerado com sucesso.';
+      } catch (err) {
+        console.error(err);
+        status.textContent = 'Erro ao gerar o PDF.';
+      }
     });
-
-    // Download dos XLSX
     document.querySelectorAll('.btn-dl').forEach(btn => {
       btn.addEventListener('click', () => {
         const tipo = btn.dataset.dl;
