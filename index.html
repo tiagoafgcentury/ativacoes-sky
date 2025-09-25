@@ -29,7 +29,6 @@
   </header>
 
   <main class="max-w-6xl mx-auto p-6 space-y-8">
-    <!-- Upload -->
     <section aria-labelledby="importacao" class="bg-white rounded-2xl shadow p-6">
       <h2 id="importacao" class="text-xl font-semibold mb-3">Importação do arquivo</h2>
       <p class="text-sm text-gray-600 mb-3">
@@ -43,7 +42,6 @@
       <p id="warnings" class="mt-2 text-xs text-amber-700"></p>
     </section>
 
-    <!-- Filtros -->
     <section id="filtros" class="bg-white rounded-2xl shadow p-6">
       <div class="flex items-center justify-between mb-4">
         <h2 class="text-lg font-semibold">Filtros</h2>
@@ -80,7 +78,6 @@
       </div>
     </section>
 
-    <!-- Resumo -->
     <section id="resumo" aria-labelledby="sec-resumo" class="grid md:grid-cols-3 gap-4">
       <div class="bg-white rounded-2xl shadow p-5">
         <div class="text-gray-500 text-xs">Registros lidos</div>
@@ -97,11 +94,10 @@
       </div>
     </section>
 
-    <!-- Gráficos -->
     <section id="graf-por-mes" class="bg-white rounded-2xl shadow p-6">
       <div class="flex items-center justify-between mb-4">
         <h2 class="text-lg font-semibold">Ativações por mês</h2>
-        <button data-dl="mes" class="btn-dl px-3 py-1.5 rounded-lg text-sm bg-indigo-50 text-indigo-700 hover:bg-indigo-100">Baixar CSV</button>
+        <button data-dl="mes" class="btn-dl px-3 py-1.5 rounded-lg text-sm bg-indigo-50 text-indigo-700 hover:bg-indigo-100">Baixar XLSX</button>
       </div>
       <canvas id="chartMes" height="120"></canvas>
     </section>
@@ -109,7 +105,7 @@
     <section id="graf-por-estado" class="bg-white rounded-2xl shadow p-6">
       <div class="flex items-center justify-between mb-4">
         <h2 class="text-lg font-semibold">Ativações por estado (UF)</h2>
-        <button data-dl="estado" class="btn-dl px-3 py-1.5 rounded-lg text-sm bg-indigo-50 text-indigo-700 hover:bg-indigo-100">Baixar CSV</button>
+        <button data-dl="estado" class="btn-dl px-3 py-1.5 rounded-lg text-sm bg-indigo-50 text-indigo-700 hover:bg-indigo-100">Baixar XLSX</button>
       </div>
       <canvas id="chartEstado" height="120"></canvas>
     </section>
@@ -117,12 +113,11 @@
     <section id="graf-por-cidade" class="bg-white rounded-2xl shadow p-6">
       <div class="flex items-center justify-between mb-4">
         <h2 class="text-lg font-semibold">Ativações por cidade</h2>
-        <button data-dl="cidade" class="btn-dl px-3 py-1.5 rounded-lg text-sm bg-indigo-50 text-indigo-700 hover:bg-indigo-100">Baixar CSV</button>
+        <button data-dl="cidade" class="btn-dl px-3 py-1.5 rounded-lg text-sm bg-indigo-50 text-indigo-700 hover:bg-indigo-100">Baixar XLSX</button>
       </div>
       <canvas id="chartCidade" height="120"></canvas>
     </section>
 
-    <!-- Tabelas -->
     <section id="tabelas" class="bg-white rounded-2xl shadow p-6">
       <h2 class="text-lg font-semibold mb-4">Detalhes</h2>
       <div class="grid md:grid-cols-3 gap-6">
@@ -162,7 +157,13 @@
       </div>
     </section>
 
-    <footer class="text-xs text-gray-500 text-center pb-12">Chave primária: <span id="pkDef">CAID + SCUA</span>. Duplicados pela chave são desconsiderados.</footer>
+    <footer class="text-xs text-gray-500 text-center pb-12 space-y-2">
+      <p>Chave primária: <span id="pkDef">CAID + SCUA</span>. Duplicados pela chave são desconsiderados.</p>
+      <div class="flex justify-center gap-4">
+        <span>Revisão: 1.1.0</span>
+        <span>Data: 2025-09-25</span>
+      </div>
+    </footer>
   </main>
 
   <script>
@@ -196,14 +197,15 @@
       const entries = Array.isArray(objOrMap) ? objOrMap : Object.entries(objOrMap);
       return entries.sort((a,b) => b[1] - a[1]); // DESC
     }
-    function downloadCSV(filename, rows) {
-      const head = Object.keys(rows[0] || {});
-      const csv = ['\ufeff' + head.join(','), ...rows.map(r => head.map(k => (r[k] ?? '')).join(','))].join('\n');
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url; a.download = filename; document.body.appendChild(a); a.click(); document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+    function downloadXLSX(filename, rows) {
+      // Cria uma nova planilha a partir do array de objetos (JSON)
+      const ws = XLSX.utils.json_to_sheet(rows);
+      // Cria um novo workbook
+      const wb = XLSX.utils.book_new();
+      // Adiciona a planilha ao workbook com o nome 'Dados'
+      XLSX.utils.book_append_sheet(wb, ws, 'Dados');
+      // Escreve e dispara o download do arquivo XLSX
+      XLSX.writeFile(wb, filename);
     }
 
     // Estado global
@@ -420,16 +422,16 @@
       doc.save('dashboard_ativacoes.pdf');
     });
 
-    // Download dos CSVs
+    // Download dos XLSX
     document.querySelectorAll('.btn-dl').forEach(btn => {
       btn.addEventListener('click', () => {
         const tipo = btn.dataset.dl;
         const map = tipo === 'mes' ? agregados.porMes : tipo === 'estado' ? agregados.porEstado : agregados.porCidade;
         const rows = Object.entries(map).map(([k,v]) => ({ categoria: k, ativacoes: v }));
-        const nome = `ativacoes_por_${tipo}.csv`;
+        const nome = `ativacoes_por_${tipo}.xlsx`;
         if (!rows.length) { document.getElementById('status').textContent = 'Sem dados para exportar.'; return; }
-        downloadCSV(nome, rows);
-        document.getElementById('status').textContent = `CSV gerado: ${nome}`;
+        downloadXLSX(nome, rows);
+        document.getElementById('status').textContent = `XLSX gerado: ${nome}`;
       });
     });
   </script>
