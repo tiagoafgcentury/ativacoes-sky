@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Dashboard de Ativações (XLSX) – v3 (top20 cidades + sem datas inválidas)</title>
+  <title>Dashboard de Ativações — CENTURY IRD (v5)</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -11,13 +11,12 @@
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
   <style>
     html { scroll-behavior: smooth; }
-    td.truncate { max-width: 18ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   </style>
 </head>
 <body class="bg-gray-50 text-gray-900">
   <header class="px-6 py-5 bg-white shadow-sm sticky top-0 z-30">
     <div class="max-w-6xl mx-auto flex items-center justify-between">
-      <h1 class="text-2xl font-semibold">Dashboard de Ativações SKY – v3</h1>
+      <h1 class="text-2xl font-semibold">Dashboard de Ativações — CENTURY IRD</h1>
       <nav class="hidden md:flex gap-6 text-sm">
         <a href="#resumo" class="hover:underline">Resumo</a>
         <a href="#filtros" class="hover:underline">Filtros</a>
@@ -32,13 +31,12 @@
   <main class="max-w-6xl mx-auto p-6 space-y-8">
     <!-- Upload -->
     <section aria-labelledby="importacao" class="bg-white rounded-2xl shadow p-6">
-      <h2 id="importacao" class="text-xl font-semibold mb-3">Importação do arquivo XLSX</h2>
+      <h2 id="importacao" class="text-xl font-semibold mb-3">Importação do arquivo</h2>
       <p class="text-sm text-gray-600 mb-3">
-        Aceita <strong>maiúsculas/minúsculas</strong> e sinônimos: <code>CAID/EQUIPMENT_NR</code>, <code>SCUA/CARD_NR</code>, <code>address_city_nm/ADDRESS_CITY_NM</code>, <code>address_state_cd/ADDRESS_STATE_CD/UF</code>, <code>account_creation_dt/ACCOUNT_CREATION_DT/DATA_ATIVACAO</code>.
+        Compatível com o layout <strong>BASE_RETORNO_IRD_CENTURY.XLSX</strong> (colunas esperadas: <code>CAID</code>, <code>CIDADE_HABILITACAO</code>, <code>UF_HABILITACAO</code>, <code>DT_ATIVACAO</code>, opcional: <code>DT_RECARGA</code>, <code>RECHARGE_DS</code>, <code>FABRICANTE</code>).
       </p>
       <div class="flex flex-col md:flex-row items-start md:items-center gap-3">
         <input id="file" type="file" accept=".xlsx,.xls" class="block w-full md:w-auto text-sm file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
-        <button id="btnExemplo" class="px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-sm">Baixar modelo (.xlsx)</button>
         <button id="btnPDF" class="px-4 py-2 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 text-sm">Exportar dashboard em PDF</button>
         <span id="status" class="text-sm text-gray-500"></span>
       </div>
@@ -86,15 +84,16 @@
     <section id="resumo" aria-labelledby="sec-resumo" class="grid md:grid-cols-3 gap-4">
       <div class="bg-white rounded-2xl shadow p-5">
         <div class="text-gray-500 text-xs">Registros lidos</div>
-        <div id="kpiTotal" class="text-2xl font-semibold">–</div>
+        <div id="kpiTotal" class="text-2xl font-semibold">—</div>
       </div>
       <div class="bg-white rounded-2xl shadow p-5">
-        <div class="text-gray-500 text-xs">Registros válidos (chave única CAID+SCUA)</div>
-        <div id="kpiValidos" class="text-2xl font-semibold">–</div>
+        <div class="text-gray-500 text-xs">Registros válidos (chave única)</div>
+        <div id="kpiValidos" class="text-2xl font-semibold">—</div>
+        <div class="text-[10px] text-gray-400 mt-1">Se não houver SCUA/CARD_NR no arquivo, a chave passa a ser <strong>CAID</strong> (somente).</div>
       </div>
       <div class="bg-white rounded-2xl shadow p-5">
         <div class="text-gray-500 text-xs">Período</div>
-        <div id="kpiPeriodo" class="text-sm">–</div>
+        <div id="kpiPeriodo" class="text-sm">—</div>
       </div>
     </section>
 
@@ -163,13 +162,13 @@
       </div>
     </section>
 
-    <footer class="text-xs text-gray-500 text-center pb-12">Chave primária composta: <code>CAID</code> + <code>SCUA</code>. Linhas duplicadas pela chave são desconsideradas automaticamente.</footer>
+    <footer class="text-xs text-gray-500 text-center pb-12">Chave primária: <span id="pkDef">CAID + SCUA</span>. Duplicados pela chave são desconsiderados.</footer>
   </main>
 
   <script>
     // Helpers
     const fmt = new Intl.NumberFormat('pt-BR');
-    const fmtDate = (d) => d ? d.toISOString().slice(0,10) : '–';
+    const fmtDate = (d) => d ? d.toISOString().slice(0,10) : '—';
     function toYYYYMM(date) {
       const y = date.getFullYear();
       const m = String(date.getMonth() + 1).padStart(2, '0');
@@ -211,6 +210,7 @@
     let charts = { mes: null, estado: null, cidade: null };
     let agregados = { porMes: {}, porEstado: {}, porCidade: {} };
     let datasetBruto = []; // {dt, estado, cidade}
+    let hasSCUA = false;
 
     function destruirGraficos() {
       for (const k of Object.keys(charts)) {
@@ -222,7 +222,7 @@
       tbody.innerHTML = '';
       for (const [k, v] of dataPairs) {
         const tr = document.createElement('tr');
-        tr.innerHTML = `<td class="p-2 pr-4 truncate" title="${k}">${k}</td><td class="p-2 text-right">${fmt.format(v)}</td>`;
+        tr.innerHTML = `<td class="p-2 pr-4" title="${k}">${k}</td><td class="p-2 text-right">${fmt.format(v)}</td>`;
         tbody.appendChild(tr);
       }
     }
@@ -241,23 +241,7 @@
     function atualizarKPIs(total, validos, minDate, maxDate) {
       document.getElementById('kpiTotal').textContent = fmt.format(total);
       document.getElementById('kpiValidos').textContent = fmt.format(validos);
-      document.getElementById('kpiPeriodo').textContent = (minDate && maxDate) ? `${fmtDate(minDate)} a ${fmtDate(maxDate)}` : '–';
-    }
-
-    function lowerKeyed(obj) {
-      const m = {};
-      for (const k of Object.keys(obj || {})) {
-        m[String(k).toLowerCase().trim()] = obj[k];
-      }
-      return m;
-    }
-    function pick(row, candidates) {
-      const m = lowerKeyed(row);
-      for (const c of candidates) {
-        const v = m[String(c).toLowerCase()];
-        if (v !== undefined && v !== null && String(v).trim() !== '') return v;
-      }
-      return null;
+      document.getElementById('kpiPeriodo').textContent = (minDate && maxDate) ? `${fmtDate(minDate)} a ${fmtDate(maxDate)}` : '—';
     }
 
     function reagregarEDesenhar(base) {
@@ -271,12 +255,12 @@
         agregados.porCidade[cidade] = (agregados.porCidade[cidade] || 0) + 1;
       }
       destruirGraficos();
-      const porMesArr = mapToSortedArray(agregados.porMes);
+      // Ordenar por mês cronologicamente (não por quantidade)
+      const porMesArr = Object.entries(agregados.porMes).sort((a,b) => a[0].localeCompare(b[0]));
       const porEstadoArr = mapToSortedArray(agregados.porEstado);
       const porCidadeArr = mapToSortedArray(agregados.porCidade);
       const tipo = document.getElementById('chartType')?.value || 'bar';
-      // TOP 20 maiores cidades (ordem DESC direto)
-      const top20Cidades = porCidadeArr.slice(0, 20);
+      const top20Cidades = porCidadeArr.slice(0, 20); // Top 20
       charts.mes = desenharGrafico('chartMes', porMesArr.map(x=>x[0]), porMesArr.map(x=>x[1]), 'Ativações por mês', tipo);
       charts.estado = desenharGrafico('chartEstado', porEstadoArr.map(x=>x[0]), porEstadoArr.map(x=>x[1]), 'Ativações por estado', tipo);
       charts.cidade = desenharGrafico('chartCidade', top20Cidades.map(x=>x[0]), top20Cidades.map(x=>x[1]), 'Ativações por cidade (Top 20)', tipo);
@@ -338,27 +322,43 @@
       let minDate = null, maxDate = null;
       let missingKeys = new Set();
 
+      // detecção de colunas neste layout
+      const lower = (s) => String(s||'').toLowerCase().trim();
+      const tryPick = (obj, names) => {
+        for (const n of names) {
+          for (const k of Object.keys(obj)) {
+            if (lower(k) === lower(n)) return obj[k];
+          }
+        }
+        return null;
+      };
+
+      let foundSCUA = false;
+
       for (const row of rows) {
-        const CAID = pick(row, ['CAID','EQUIPMENT_NR','EQUIPAMENT_NR']);
-        const SCUA = pick(row, ['SCUA','CARD_NR']);
-        const dtRaw = pick(row, ['account_creation_dt','ACCOUNT_CREATION_DT','DATA_ATIVACAO','Data_Ativacao']);
-        const estadoRaw = pick(row, ['address_state_cd','ADDRESS_STATE_CD','UF']);
-        const cidadeRaw = pick(row, ['address_city_nm','ADDRESS_CITY_NM','CIDADE']);
+        const CAID = tryPick(row, ['CAID','EQUIPMENT_NR']);
+        const SCUA = tryPick(row, ['SCUA','CARD_NR']); // pode não existir neste layout
+        const cidadeRaw = tryPick(row, ['CIDADE_HABILITACAO','ADDRESS_CITY_NM','CIDADE']);
+        const estadoRaw = tryPick(row, ['UF_HABILITACAO','ADDRESS_STATE_CD','UF']);
+        const dtRaw = tryPick(row, ['DT_ATIVACAO','ACCOUNT_CREATION_DT','DATA_ATIVACAO','account_creation_dt']);
 
-        if (CAID == null) missingKeys.add('CAID/EQUIPMENT_NR');
-        if (SCUA == null) missingKeys.add('SCUA/CARD_NR');
+        if (SCUA != null && String(SCUA).trim() !== '') foundSCUA = true;
 
-        if (CAID == null || SCUA == null) continue;
+        if (CAID == null) missingKeys.add('CAID');
+        if (cidadeRaw == null) missingKeys.add('CIDADE_HABILITACAO');
+        if (estadoRaw == null) missingKeys.add('UF_HABILITACAO');
+        if (dtRaw == null) missingKeys.add('DT_ATIVACAO');
 
-        const key = `${CAID}__${SCUA}`;
-        if (dedupMap.has(key)) continue;
+        if (CAID == null) continue;
+
+        const pk = (SCUA != null && String(SCUA).trim() !== '') ? `${CAID}__${SCUA}` : `${CAID}`;
+        if (dedupMap.has(pk)) continue;
 
         const dt = parsePossiblyExcelDate(dtRaw);
-
         const estado = (estadoRaw ?? '—').toString().trim() || '—';
         const cidade = (cidadeRaw ?? '—').toString().trim() || '—';
 
-        dedupMap.set(key, { dt, estado, cidade });
+        dedupMap.set(pk, { dt, estado, cidade });
 
         if (dt) {
           if (!minDate || dt < minDate) minDate = dt;
@@ -366,15 +366,17 @@
         }
       }
 
+      hasSCUA = foundSCUA;
+      document.getElementById('pkDef').textContent = hasSCUA ? 'CAID + SCUA' : 'CAID';
+
       if (missingKeys.size) {
-        warnings.textContent = 'Atenção: as seguintes colunas não foram encontradas em algumas linhas: ' + Array.from(missingKeys).join(', ') + '.';
+        warnings.textContent = 'Aviso: não foi possível encontrar em algumas linhas: ' + Array.from(missingKeys).join(', ') + '.';
       }
 
       const validos = dedupMap.size;
       datasetBruto = Array.from(dedupMap.values());
 
       atualizarKPIs(totalLidos, validos, minDate, maxDate);
-
       popularFiltros(datasetBruto);
       reagregarEDesenhar(datasetBruto);
 
@@ -429,27 +431,6 @@
         downloadCSV(nome, rows);
         document.getElementById('status').textContent = `CSV gerado: ${nome}`;
       });
-    });
-
-    // Modelo de arquivo multi-aba
-    document.getElementById('btnExemplo').addEventListener('click', () => {
-      const wb = XLSX.utils.book_new();
-      const dados1 = [
-        { ACCOUNT_CREATION_DT: '2025-08-01', ADDRESS_CITY_NM: 'São Paulo', ADDRESS_STATE_CD: 'SP', EQUIPMENT_NR: 'EQP001', CARD_NR: 'CARD001' },
-        { ACCOUNT_CREATION_DT: '01/08/2025', ADDRESS_CITY_NM: 'Rio de Janeiro', ADDRESS_STATE_CD: 'RJ', EQUIPMENT_NR: 'EQP002', CARD_NR: 'CARD002' }
-      ];
-      const dados2 = [
-        { account_creation_dt: 45500, address_city_nm: 'Belo Horizonte', address_state_cd: 'MG', CAID: 'EQP003', SCUA: 'CARD003' },
-        { account_creation_dt: '2025-09-15', address_city_nm: 'Campinas', address_state_cd: 'SP', CAID: 'EQP001', SCUA: 'CARD001' }
-      ];
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(dados1), 'CENTURY');
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(dados2), 'outra_aba');
-      const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-      const blob = new Blob([wbout], { type: 'application/octet-stream' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url; a.download = 'modelo_ativacoes.xlsx'; a.click();
-      URL.revokeObjectURL(url);
     });
   </script>
 </body>
